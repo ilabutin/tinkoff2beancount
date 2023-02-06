@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "tinkoff2beancount": {
+      "commandName": "Project",
+      "commandLineArgs": "c:\\temp\\tinkoff.csv c:\\temp\\tinkoff_output.beancount"
+    }
+  }
+}
