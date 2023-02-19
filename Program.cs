@@ -61,6 +61,10 @@ using (StreamWriter writer = new StreamWriter(outputFile))
         {
             writer.WriteLine($"  {categoriesTable["tinkoff_interest"]}");
         }
+        else if (t.TotalValue > 0)
+        {
+            writer.WriteLine($"  Income:");
+        }
         else
         {
             writer.WriteLine($"  Expenses:");
