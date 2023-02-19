@@ -3,11 +3,16 @@ using CsvHelper.Configuration;
 using System.Globalization;
 using System.Text;
 using tinkoff2beancount;
+using Tomlyn;
+using Tomlyn.Model;
 
-string inputCsvFile = args[0];
-string outputFile = args[1];
+string configFile = args[0];
+string inputCsvFile = args[1];
+string outputFile = args[2];
 
 Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+
+var config = Toml.ToModel(File.ReadAllText(configFile));
 
 NumberFormatInfo numberFormatInfo = new NumberFormatInfo();
 numberFormatInfo.NumberDecimalSeparator = ",";
@@ -24,6 +29,9 @@ using (CsvReader csvReader = new CsvReader(reader, csvConfig))
     transactions.AddRange(entries.Select(ParseCsvEntry).Where(t => t.StatusOk).OrderBy(t => t.Date));
 }
 
+TomlTable cardsTable = (TomlTable)config["cards"];
+TomlTable categoriesTable = (TomlTable)config["categories"];
+
 using (StreamWriter writer = new StreamWriter(outputFile))
 {
     foreach (var t in transactions)
@@ -33,17 +41,30 @@ using (StreamWriter writer = new StreamWriter(outputFile))
         // Write MCC if exists, otherwise 0
         writer.WriteLine($"  mcc: {t.Mcc ?? "0"}");
         // Write main expense account
-        string account = t.CardNumber switch
+        string? cardNumber = t.CardNumber?.TrimStart('*');
+        if (cardNumber == null || !cardsTable.TryGetValue(cardNumber, out object account))
         {
-            "*2056" => "Assets:M:Bank:Tinkoff:Igor:Black",
-            "*8791" => "Assets:M:Bank:Tinkoff:Olga:Black",
-            "*7024" => "Assets:M:Bank:Tinkoff:Roman",
-            _ => "??"
-        };
+            account = "XX";
+        }
         writer.WriteLine($"  {account}     {t.TotalValue.ToString("F2")} RUB");
 
         // Write category
-        writer.WriteLine($"  Expenses:");
+        if (t.Description == "Перевод между счетами")
+        {
+            writer.WriteLine($"  YY");
+        }
+        else if (t.Description?.Contains("Кэшбэк за") ?? false)
+        {
+            writer.WriteLine($"  {categoriesTable["tinkoff_cashback"]}");
+        }
+        else if (t.Description?.Contains("Проценты на остаток") ?? false)
+        {
+            writer.WriteLine($"  {categoriesTable["tinkoff_interest"]}");
+        }
+        else
+        {
+            writer.WriteLine($"  Expenses:");
+        }
         writer.WriteLine();
     }
 }

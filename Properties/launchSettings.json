@@ -2,7 +2,7 @@
   "profiles": {
     "tinkoff2beancount": {
       "commandName": "Project",
-      "commandLineArgs": "c:\\temp\\tinkoff.csv c:\\temp\\tinkoff_output.beancount"
+      "commandLineArgs": "c:\\p\\tinkoff2beancount\\src\\config.toml c:\\p\\tinkoff2beancount\\tinkoff.csv c:\\p\\tinkoff2beancount\\tinkoff_output.beancount"
     }
   }
 }
