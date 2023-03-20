@@ -12,7 +12,7 @@ string outputFile = args[2];
 
 Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 
-var config = Toml.ToModel(File.ReadAllText(configFile));
+var config = Toml.ToModel(File.ReadAllText(configFile, Encoding.UTF8));
 
 NumberFormatInfo numberFormatInfo = new NumberFormatInfo();
 numberFormatInfo.NumberDecimalSeparator = ",";
@@ -32,7 +32,7 @@ using (CsvReader csvReader = new CsvReader(reader, csvConfig))
 TomlTable cardsTable = (TomlTable)config["cards"];
 TomlTable categoriesTable = (TomlTable)config["categories"];
 
-using (StreamWriter writer = new StreamWriter(outputFile))
+using (StreamWriter writer = new StreamWriter(outputFile, false, Encoding.UTF8))
 {
     foreach (var t in transactions)
     {
@@ -46,7 +46,7 @@ using (StreamWriter writer = new StreamWriter(outputFile))
         {
             account = "XX";
         }
-        writer.WriteLine($"  {account}     {t.TotalValue.ToString("F2")} RUB");
+        writer.WriteLine($"  {account}     {t.TotalValue.ToString("F2", CultureInfo.InvariantCulture)} RUB");
 
         // Write category
         if (t.Description == "Перевод между счетами")
