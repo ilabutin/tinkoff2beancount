@@ -2,7 +2,7 @@
   "profiles": {
     "tinkoff2beancount": {
       "commandName": "Project",
-      "commandLineArgs": "/Users/igor/docs/Деньги/учет/money_beancount/config.toml /Users/igor/Downloads/tinkoff.csv /Users/igor/Downloads/tinkoff.beancount"
+      "commandLineArgs": "/Users/igor/docs/Деньги/учет/money_beancount/config.toml /Users/igor/Downloads/tinkoff.beancount /Users/igor/Downloads/tinkoff.csv"
     }
   }
 }
