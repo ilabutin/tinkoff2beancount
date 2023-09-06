@@ -14,7 +14,9 @@ Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 var config = Toml.ToModel(File.ReadAllText(configFile, Encoding.UTF8));
 TomlTable cardsTable = (TomlTable)config["cards"];
 TomlTable categoriesTable = (TomlTable)config["categories"];
-TomlTable dropStrings = (TomlTable)config["tinkoff_drop"]; 
+TomlTable dropStrings = (TomlTable)config["tinkoff_drop"];
+TomlTable options = (TomlTable)config["options"];
+decimal rTransferSum = decimal.Parse((string)options["r_transfer_sum"], CultureInfo.InvariantCulture);
 
 NumberFormatInfo numberFormatInfo = new NumberFormatInfo();
 numberFormatInfo.NumberDecimalSeparator = ",";
@@ -38,29 +40,56 @@ for (int argN = 2; argN < args.Length; argN++)
 }
 
 using StreamWriter writer = new StreamWriter(outputFile, false, Encoding.UTF8);
-foreach (var t in transactions)
+for (int i = 0; i < transactions.Count; i++)
 {
+    Transaction t = transactions[i];
+    Transaction? nextT = i == transactions.Count - 1 ? null : transactions[i + 1];
+    
     if (dropStrings.Values.Any(v => t.Description?.Contains((string)v) ?? false))
     {
         Console.WriteLine($"dropped: {t}");
         continue;
     }
-    if ((t.Description?.Contains("ман Л") ?? false) && t.TotalValue == 150)
+    if ((t.Description?.Contains("ман Л") ?? false) && t.TotalValue == rTransferSum)
     {
         Console.WriteLine($"dropped: {t}");
         continue;
     }
-            
+    // Если две подряд транзакции с одинаковой суммой, но разными знаками, то убираем одну, т.к. это перевод
+    if (t.Description == "Перевод между счетами" && nextT != null)
+    {
+        if (t.TotalValue == -nextT.TotalValue
+            && t.Description == nextT.Description
+            && t.CardNumber == nextT.CardNumber
+            && t.Category == "Переводы")
+        {
+            Console.WriteLine($"dropped transfer: {t}");
+            continue;
+        }
+    }
+        
+
     // Write header line
     writer.WriteLine($"{t.Date.ToString("yyyy-MM-dd")} * \"{t.Description}\"");
     // Write MCC if exists, otherwise 0
     writer.WriteLine($"  mcc: {t.Mcc ?? "0"}");
     // Write main expense account
     string? cardNumber = t.CardNumber?.TrimStart('*');
-    if ((t.Description?.Contains("ман Л") ?? false) && t.TotalValue == -150)
+    if ((t.Description?.Contains("ман Л") ?? false) && t.TotalValue == -rTransferSum)
     {
         cardNumber = "2056";
     }
+    else if (t.Description == "Перевод между счетами" && t.TotalValue == -rTransferSum)
+    {
+        cardNumber = "2056";
+    } 
+
+    if (t.Description?.Contains("Подписка Tinkoff pro") ?? false)
+    {
+        cardNumber = "2056";
+        
+    }
+    
     if (cardNumber == null || !cardsTable.TryGetValue(cardNumber, out object account))
     {
         account = "XX";
@@ -68,9 +97,13 @@ foreach (var t in transactions)
     writer.WriteLine($"  {account}     {t.TotalValue.ToString("F2", CultureInfo.InvariantCulture)} RUB");
 
     // Write category
-    if ((t.Description?.Contains("ман Л") ?? false) && t.TotalValue == -150)
+    if (t.Description == "Перевод между счетами" && t.TotalValue == -rTransferSum)
     {
         writer.WriteLine($"  {cardsTable["7024"]}");
+    }
+    else if (t.Description == "Подписка Tinkoff pro")
+    {
+        writer.WriteLine($"  {categoriesTable["tinkoff_pro"]}");
     }
     else if (t.Description == "Перевод между счетами")
     {
@@ -98,19 +131,19 @@ foreach (var t in transactions)
 Transaction ParseCsvEntry(TransactionEntry transactionEntry)
 {
     DateOnly date = DateOnly.FromDateTime(DateTime.Now);
-    if (transactionEntry.Date is string d)
+    if (transactionEntry.Date is { } d)
     {
         date = DateOnly.Parse(d);
     }
 
     decimal totalValue = 0.0M;
-    if (transactionEntry.TotalValue is string v)
+    if (transactionEntry.TotalValue is { } v)
     {
         totalValue = Convert.ToDecimal(v, numberFormatInfo);
     }
 
     string category = "";
-    if (transactionEntry.Category is string c)
+    if (transactionEntry.Category is { } c)
     {
         category = c;
     }
