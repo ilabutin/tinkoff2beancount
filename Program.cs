@@ -60,7 +60,6 @@ for (int i = 0; i < transactions.Count; i++)
     {
         if (t.TotalValue == -nextT.TotalValue
             && t.Description == nextT.Description
-            && t.CardNumber == nextT.CardNumber
             && t.Category == "Переводы")
         {
             Console.WriteLine($"dropped transfer: {t}");
@@ -70,9 +69,9 @@ for (int i = 0; i < transactions.Count; i++)
         
 
     // Write header line
-    writer.WriteLine($"{t.Date.ToString("yyyy-MM-dd")} * \"{t.Description}\"");
+    string headerDescription = t.Description ?? "Прочее";
     // Write MCC if exists, otherwise 0
-    writer.WriteLine($"  mcc: {t.Mcc ?? "0"}");
+    string mcc = t.Mcc ?? "0";
     // Write main expense account
     string? cardNumber = t.CardNumber?.TrimStart('*');
     if ((t.Description?.Contains("ман Л") ?? false) && t.TotalValue == -rTransferSum)
@@ -87,44 +86,55 @@ for (int i = 0; i < transactions.Count; i++)
     if (t.Description?.Contains("Подписка Tinkoff pro") ?? false)
     {
         cardNumber = "2056";
-        
+    }
+
+    if (t.Description == "Тинькофф Топливо")
+    {
+        cardNumber = "2056";
     }
     
     if (cardNumber == null || !cardsTable.TryGetValue(cardNumber, out object account))
     {
         account = "XX";
     }
-    writer.WriteLine($"  {account}     {t.TotalValue.ToString("F2", CultureInfo.InvariantCulture)} RUB");
 
     // Write category
+    object category = "YY";
     if (t.Description == "Перевод между счетами" && t.TotalValue == -rTransferSum)
     {
-        writer.WriteLine($"  {cardsTable["7024"]}");
+        category = cardsTable["7024"];
+        headerDescription = "Перевод Роме";
     }
     else if (t.Description == "Подписка Tinkoff pro")
     {
-        writer.WriteLine($"  {categoriesTable["tinkoff_pro"]}");
-    }
-    else if (t.Description == "Перевод между счетами")
-    {
-        writer.WriteLine($"  YY");
+        category = categoriesTable["tinkoff_pro"];
     }
     else if (t.Description?.Contains("Кэшбэк за") ?? false)
     {
-        writer.WriteLine($"  {categoriesTable["tinkoff_cashback"]}");
+        category = categoriesTable["tinkoff_cashback"];
     }
     else if (t.Description?.Contains("Проценты на остаток") ?? false)
     {
-        writer.WriteLine($"  {categoriesTable["tinkoff_interest"]}");
+        category = categoriesTable["tinkoff_interest"];
     }
+    else if (t is { TotalValue: < 0, Description: not null } 
+             && categoriesTable.TryGetValue(t.Description, out var foundCategory))
+    {
+        category = foundCategory;
+    }    
     else if (t.TotalValue > 0)
     {
-        writer.WriteLine($"  Income:");
+        category = "Income:";
     }
     else
     {
-        writer.WriteLine($"  Expenses:");
+        category = "Expenses:";
     }
+    
+    writer.WriteLine($"{t.Date.ToString("yyyy-MM-dd")} * \"{headerDescription}\"");
+    writer.WriteLine($"  mcc: {mcc}");
+    writer.WriteLine($"  {account}     {t.TotalValue.ToString("F2", CultureInfo.InvariantCulture)} RUB");
+    writer.WriteLine($"  {category}");
     writer.WriteLine();
 }
 
