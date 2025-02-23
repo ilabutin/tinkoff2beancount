@@ -143,7 +143,7 @@ Transaction ParseCsvEntry(TransactionEntry transactionEntry)
     DateOnly date = DateOnly.FromDateTime(DateTime.Now);
     if (transactionEntry.Date is { } d)
     {
-        date = DateOnly.Parse(d);
+        date = DateOnly.ParseExact(d, "dd.MM.yyyy", CultureInfo.InvariantCulture);
     }
 
     decimal totalValue = 0.0M;
