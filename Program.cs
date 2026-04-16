@@ -27,7 +27,7 @@ var csvConfig = new CsvConfiguration(CultureInfo.InvariantCulture)
 List<Transaction> transactions = new List<Transaction>();
 for (int argN = 2; argN < args.Length; argN++)
 {
-    using (StreamReader reader = new StreamReader(args[argN], System.Text.Encoding.GetEncoding("windows-1251")))
+    using (StreamReader reader = new StreamReader(args[argN], System.Text.Encoding.GetEncoding("utf-8")))
     {
         using (CsvReader csvReader = new CsvReader(reader, csvConfig))
         {
